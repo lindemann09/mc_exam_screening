@@ -1,0 +1,178 @@
+---
+title: "Draft: Exam Review 2018"
+output:
+  html_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+source("risbo_data.R")
+
+data_folder = "risbozips_2018"
+```
+
+#  Preprocessing data 
+```{r}
+# read and check zip files
+all = risbo_folder_overview(data_folder)
+```
+
+##  Select courses
+```{r}
+# BA psychology only
+courses_list = all %>% 
+          mutate(
+              year = ifelse(str_starts(CourseCode, pattern="FSWP1|FSWPE1"), 1,
+                     ifelse(str_starts(CourseCode, pattern="FSWP2|FSWPE2"), 2,
+                     ifelse(str_starts(CourseCode, pattern="FSWP3|FSWPE3"), 3, NA)))
+          ) %>%
+          filter(year>0 & year<4) 
+
+
+# check doublicates and take only the newest version
+courses_list  = courses_list %>%
+            arrange(desc(timestamp)) %>% 
+            group_by(ProcessingNumber) %>%
+            mutate(n_versions = n()) %>%  # count number of versions
+            slice(1) %>%                  # take only the first one
+            ungroup() 
+
+# find resits
+courses_list = courses_list %>% 
+            mutate(resit=0) %>%
+            arrange(CourseCode, ExamDate) 
+.prev_course = ""
+.prev_date = ""
+for (x in c(1:nrow(courses_list))) {
+    if (courses_list$CourseCode[x] !=.prev_course) {
+      # next course
+      courses_list$resit[x] = 0 
+      .prev_course = courses_list$CourseCode[x]
+      .prev_date = courses_list$ExamDate[x]
+    } else if (courses_list$ExamDate[x] != .prev_date) {
+      # same course, different date --> resit
+      courses_list$resit[x] = courses_list$resit[x-1] + 1
+      .prev_date = courses_list$ExamDate[x]
+    } else {
+      # same course, same data
+      courses_list$resit[x] = courses_list$resit[x-1]
+    }
+}
+
+kable(data.frame(select(courses_list, id,  CourseCode, year, ExamName, NumQuestion, ExamType, n_options )))
+```
+
+## Read data of all selected exams
+```{r, message=FALSE}
+exams = list()
+for (x in c(1:nrow(courses_list))) {
+  fl = courses_list$file[x]
+  tmp = read_risbo_mcexam(fl, skip_item_profiles = FALSE)
+  exams[[as.character(tmp$processing_number)]] = tmp
+}
+```
+
+# Calculating exam statistics
+```{r}
+calc_exam_stats <- function(courses_list, exams) {
+  exam_stats = tibble()
+  for (e in exams) {
+    if (!is.null(e)) {
+      tmp = filter(e$grades, grade>0)
+      .stats = tibble(
+              ProcessingNumber=e$processing_number,
+              n_grades = nrow(tmp),
+              n_failed = nrow(filter(tmp, grade<5.5)),
+              mean_grade = mean(tmp$grade),
+              std_grade = sd(tmp$grade),
+              n_adjusted_correct = nrow(filter(e$percentages, n_correct>1)),
+              n_inactive = e$info$NumQuestion - nrow(e$percentages)
+              )
+      exam_stats = rbind(exam_stats, .stats)
+    }
+  }
+  
+  exam_stats = left_join(x=courses_list, y=exam_stats, by=c("ProcessingNumber")) %>%
+              mutate(perc_failed = 100* n_failed / n_grades)
+  
+  return(exam_stats)
+}
+
+exam_stats = calc_exam_stats(courses_list, exams)
+```
+
+
+# Statistics 
+
+## Exam Types
+```{r}
+xtabs(~year + ExamType, data=filter(courses_list, resit==0))
+xtabs(~ExamType + NumQuestion, data=filter(courses_list, resit==0))
+```
+
+
+## All grades
+
+Descriptive stastics of all polled grades
+
+```{r}
+all_grades = tibble()
+for (e in exams) {
+  tmp = mutate(e$grades, ProcessingNumber = e$processing_number)
+  all_grades = rbind(all_grades, tmp)
+}
+all_grades = filter(all_grades, grade>0)
+
+
+tmp = left_join(all_grades, 
+                select(courses_list, ProcessingNumber, year, resit), 
+                by=c("ProcessingNumber")) %>%
+      mutate(failed = grade<5.5)
+
+res = tmp %>% 
+    group_by(year ,resit) %>%
+    summarize(n = n(), 
+              mean_grade = mean(grade), 
+              median_grade = median(grade), 
+              perc_failed = 100*sum(failed) / n ) 
+
+kable(res)
+
+ggplot(tmp) +
+    geom_histogram(aes(x = grade, y = ..density..),
+                   binwidth = 0.5, fill = "grey", color = "black") +
+    geom_density(aes(x = grade), size=1.5, color="red") + 
+    geom_vline(xintercept = 5.5,  linetype="dashed") +
+    facet_grid(resit ~ year, labeller = label_both) + 
+    theme_bw()
+```
+
+## Ranking course difficulty 
+```{r}
+res = filter(exam_stats) %>% 
+    arrange(resit, desc(perc_failed)) %>%
+    select(resit, perc_failed, n_failed, CourseCode, ExamName, year) 
+kable(res)
+
+```
+
+
+# Item analysis
+```{r}
+# all response of all MC test
+all_percentages = tibble()
+for (e in exams) {
+  if (e$info$ExamType == "MC" & e$info$n_options==4) {
+    tmp = mutate(e$percentages, processing_number = e$processing_number)
+    all_grades = rbind(all_percentages, tmp)
+  }
+}
+
+```
+
+
+
