@@ -1,6 +1,6 @@
 # reading risbo zip file, Oliver Lindemann
 
-.version_risbo_data = "0.4.0"
+.version_risbo_data = "0.4.1"
 
 library(tidyverse)
 library(stringi)
@@ -39,7 +39,7 @@ zipfile_check <- function(zipfile, warnings=FALSE) {
 }
 
 
-parse_exam_info <- function(zipfile) {in 
+parse_exam_info <- function(zipfile) {
   rtn <- list()
   rtn$n_options = NULL
   
