@@ -4,7 +4,8 @@
 
 library(tidyverse)
 library(stringi)
-# requires also zip (do not import zip) 
+# requires also zip (do not import zip gobally, because of conficts 
+#                    with this script [unclear bug in zip-library]) 
 
 
 zipfile_check <- function(zipfile, warnings=FALSE) {
@@ -38,7 +39,7 @@ zipfile_check <- function(zipfile, warnings=FALSE) {
 }
 
 
-parse_exam_info <- function(zipfile) {
+parse_exam_info <- function(zipfile) {in 
   rtn <- list()
   rtn$n_options = NULL
   
