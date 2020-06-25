@@ -1,5 +1,5 @@
 ---
-title: "Draft: Exam Review 2018"
+title: "Example: Exam Review DPECs 2018"
 output:
   html_document:
     toc: yes
@@ -10,9 +10,9 @@ editor_options:
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(knitr)
-source("risbo_data.R")
+source("risbo_zip_files.R")
 
-data_folder = "risbozips_2018"
+data_folder = "risbozips_2018" ## <------------- Folder with RisboZips (see shared folder)
 ```
 
 #  Preprocessing data 

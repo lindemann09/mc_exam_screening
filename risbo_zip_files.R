@@ -6,6 +6,7 @@ library(tidyverse)
 library(stringi)
 # requires also zip (do not import zip) 
 
+
 zipfile_check <- function(zipfile, warnings=FALSE) {
   # checks is file is a risbo file in good shape 
   # needs to be a zip that includes one instance of the following files:
