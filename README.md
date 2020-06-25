@@ -11,7 +11,7 @@
 
 `install.packages(c("tidyverse", "stringi", "zip"))`
 
-The example analysis requires additonally `knitr`.
+The example analysis requires additionally `knitr`.
 
 ---
 Oliver Lindemann

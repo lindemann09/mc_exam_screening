@@ -1,9 +1,9 @@
 ---
-title: "Example: Exam Review DPECs 2018"
+title: "Example Exam Screening DPECS 2018"
 output:
   html_document:
     toc: yes
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -15,7 +15,7 @@ source("risbo_zip_files.R")
 data_folder = "risbozips_2018" ## <------------- Folder with RisboZips (see shared folder)
 ```
 
-#  Preprocessing data 
+#  Preprocessing data
 ```{r}
 # read and check zip files
 all = get_course_list(data_folder, only_newest_processing_version = TRUE)
@@ -25,13 +25,13 @@ all = get_course_list(data_folder, only_newest_processing_version = TRUE)
 * read exams
 ```{r, message=FALSE}
 # BA psychology only
-course_list = all %>% 
+course_list = all %>%
           mutate(
               year = ifelse(str_starts(CourseCode, pattern="FSWP1|FSWPE1"), 1,
                      ifelse(str_starts(CourseCode, pattern="FSWP2|FSWPE2"), 2,
                      ifelse(str_starts(CourseCode, pattern="FSWP3|FSWPE3"), 3, NA)))
           ) %>%
-          filter(year>0 & year<4) 
+          filter(year>0 & year<4)
 
 course_list = course_list_find_resits(course_list)
 
@@ -42,7 +42,7 @@ exams = get_all_mc_exams(course_list)
 ```
 
 
-# Descriptives 
+# Descriptives
 
 * add descriptive statistics
 ```{r}
@@ -53,7 +53,7 @@ course_list = course_list %>%
 
 ```{r}
 res = course_list %>%
-      select(year, CourseCode, resit, n_grades, NumQuestion, ExamType, 
+      select(year, CourseCode, resit, n_grades, NumQuestion, ExamType,
                 n_options, n_risbo_processings, ProcessingNumber, ExamName ) %>%
       arrange(year, CourseCode, resit, n_grades)
 kable(data.frame(res))
@@ -65,19 +65,19 @@ kable(data.frame(res))
 xtabs(~year + n_options, data=filter(course_list, resit==0))
 
 ggplot(filter(course_list, resit==0)) +
-      geom_histogram(aes(x = n_grades), 
+      geom_histogram(aes(x = n_grades),
                    binwidth = 50, fill = "grey", color = "black") +
       ggtitle("Number of Grades, first exam") + theme_bw()
 
 ggplot(filter(course_list, resit>0)) +
       geom_histogram(aes(x = n_grades),
-                   binwidth = 10, fill = "grey", color = "black") + 
+                   binwidth = 10, fill = "grey", color = "black") +
       ggtitle("Number of Grades, resit") + theme_bw()
 
 
 xtabs(~NumQuestion + n_options, data=course_list)
 ggplot(course_list) +
-      geom_bar(aes(x = adjustments_made), fill = "grey", color = "black") + 
+      geom_bar(aes(x = adjustments_made), fill = "grey", color = "black") +
       ggtitle("Exam adjustments") + theme_bw()
 
 xtabs(~n_multiple_correct+n_inactive, data=course_list)
@@ -92,26 +92,26 @@ xtabs(~n_multiple_correct+n_inactive, data=course_list)
 all_grades = extract_all_grades(exams)
 
 
-tmp = left_join(all_grades, 
-                select(course_list, ProcessingNumber, year, resit), 
+tmp = left_join(all_grades,
+                select(course_list, ProcessingNumber, year, resit),
                 by=c("ProcessingNumber")) %>%
       mutate(failed = grade<5.5)
 
-res = tmp %>% 
+res = tmp %>%
     group_by(year ,resit) %>%
-    summarise(n = n(), 
-              mean_grade = mean(grade), 
-              median_grade = median(grade), 
-              perc_failed = 100*sum(failed) / n ) 
+    summarise(n = n(),
+              mean_grade = mean(grade),
+              median_grade = median(grade),
+              perc_failed = 100*sum(failed) / n )
 
 kable(res)
 
 ggplot(tmp) +
     geom_histogram(aes(x = grade, y = ..density..),
                    binwidth = 0.5, fill = "grey", color = "black") +
-    geom_density(aes(x = grade), size=1.5, color="red") + 
+    geom_density(aes(x = grade), size=1.5, color="red") +
     geom_vline(xintercept = 5.5,  linetype="dashed") +
-    facet_grid(resit ~ year, labeller = label_both) + 
+    facet_grid(resit ~ year, labeller = label_both) +
     theme_bw()
 
 rm(res)
@@ -137,9 +137,9 @@ course_list = left_join(course_list, tmp, by=c("ProcessingNumber"="processing_nu
 
 
 
-# Course evaluation 
+# Course evaluation
 ```{r}
-tmp = course_list %>% 
+tmp = course_list %>%
     arrange(resit, desc(n_grades)) %>%
     select(resit, perc_failed, n_grades, n_multiple_correct, n_inactive, n_very_easy,
            n_below_guessing, n_incorr_preferred,
